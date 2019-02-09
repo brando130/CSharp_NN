@@ -77,17 +77,7 @@ namespace CSharp_NN
                     if (i >= elites)
                     {              
                         population[i] = NNHelper.CopyNN(population[rnd.Next(0, elites - 1)]);
-                        
-                        for (int l = 0; l < population[i].nodes.Length - 1; l++)
-                        {
-                            for (int n = 0; n < population[i].nodes[l].Length; n++)
-                            {
-                                for (int w = 0; w < population[i].nodes[l + 1].Length; w++)
-                                {
-                                    population[i].weights[l][n][w] *= MathTools.NextDouble(rnd, minMutation, maxMutation);
-                                }
-                            }
-                        }
+                        NNHelper.MutateWeights(population[i], rnd, minMutation, maxMutation);
                     }
                 }
 

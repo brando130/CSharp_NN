@@ -85,5 +85,20 @@ namespace CSharp_NN
                 }
             }
         }
+
+        public static void MutateWeights(NN nn, Random rnd, double minMutation, double maxMutation)
+        {
+            for (int l = 0; l < nn.nodes.Length - 1; l++)
+            {
+                for (int n = 0; n < nn.nodes[l].Length; n++)
+                {
+                    for (int w = 0; w < nn.nodes[l + 1].Length; w++)
+                    {
+                        nn.weights[l][n][w] *= MathTools.NextDouble(rnd, minMutation, maxMutation);
+                    }
+                }
+            }
+        }
+
     }
 }
