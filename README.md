@@ -1,4 +1,4 @@
-# CSharp_NN
+# C#_NN
 Simple neuroevolution of feedforward neural networks through a genetic algorithm in C#.
 
 This project is my attempt to implement the ideas in Such, et. al 2017 (Uber AI Labs)
