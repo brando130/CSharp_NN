@@ -24,7 +24,6 @@ namespace CSharp_NN
 
         public GA(int populationSize, Func<NN, double> costFunction, int inputCount, int outputCount, NN.ActivationFunction activationFunctionHiddenLayers, NN.ActivationFunction activationFunctionOutputLayer, int minHiddenLayers, int maxHiddenLayers, int minHiddenNodes, int maxHiddenNodes, double weightMinValue, double weightMaxValue, double biasMinValue, double biasMaxValue, int elitesToCopy, double minMutationPercentage, double maxMutationPercentage)
         {
-
             population = new NN[populationSize];
             cost = costFunction;
             elites = elitesToCopy;
@@ -36,19 +35,20 @@ namespace CSharp_NN
             {
                 // Specify input, hidden, and output layer node counts
                 int[] nodeCounts = new int[2 + rnd.Next(minHiddenLayers, maxHiddenLayers + 1)];
+
                 nodeCounts[0] = inputCount;
+
                 for (int j = 1; j < nodeCounts.Length - 1; j++)
-                {
                     nodeCounts[j] = rnd.Next(minHiddenNodes, maxHiddenNodes + 1);
-                }
+
                 nodeCounts[nodeCounts.Length - 1] = outputCount;
 
                 // Create the neural network
                 NN.ActivationFunction[] functions = new NN.ActivationFunction[nodeCounts.Length - 1];
+
                 for (int j = 0; j < nodeCounts.Length - 2; j++)
-                {
                     functions[j] = activationFunctionHiddenLayers;
-                }
+
                 population[i] = new NN(nodeCounts, functions, activationFunctionOutputLayer);
 
                 // Initialize weights
@@ -60,22 +60,20 @@ namespace CSharp_NN
         {
             try
             {
-          
                 // Initial cost and sort
                 if (g == 0)
                 {
                     foreach (NN nn in population)
-                    {
                         nn.cost = cost(nn);
-                    }
+
                     population = population.OrderBy(p => p.cost).ToArray();
                 }
 
                 // Copy non-elite networks and mutate them. 
                 for (int i = 1; i < population.Length; i++)
-                {          
+                {
                     if (i >= elites)
-                    {              
+                    {
                         population[i] = NNHelper.CopyNN(population[rnd.Next(0, elites - 1)]);
                         NNHelper.MutateWeights(population[i], rnd, minMutation, maxMutation);
                     }
@@ -83,9 +81,8 @@ namespace CSharp_NN
 
                 // Cost and sort
                 foreach (NN nn in population)
-                {
                     nn.cost = cost(nn);
-                }
+
                 population = population.OrderBy(p => p.cost).ToArray();
 
                 // Increment generation

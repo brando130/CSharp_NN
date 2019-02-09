@@ -9,7 +9,6 @@ namespace CSharp_NN
 {
     public class NN
     {
-
         // Feedforward Neural Network
         // (C) 2019 Brandon Anderson  brando.slc@gmail.com
 
@@ -19,10 +18,9 @@ namespace CSharp_NN
         public double[][] nodes;
         public double[][] biases;
         public double[][][] weights;
+        public double cost;
         public ActivationFunction[] hiddenLayerFunctions;
         public ActivationFunction outputLayerFunction;
-
-        public double cost;
 
         public NN(int[] nodeCount, ActivationFunction[] hiddenLayerActivationFunction, ActivationFunction outputLayerActivationFunction)
         {
@@ -42,9 +40,8 @@ namespace CSharp_NN
                 {
                     double node = 0;
                     double bias = 0;
-
                     nodes[layer][i] = node;
-                    biases[layer][i] = bias;     
+                    biases[layer][i] = bias;
                 }
             }
             // For every layer except the last layer
@@ -55,12 +52,9 @@ namespace CSharp_NN
                 for (int node = 0; node < nodeCount[layer]; node++)
                 {
                     weights[layer][node] = new double[nodeCount[layer + 1]];
-                    // For every node in the next layer
+                    // For every node in the next layer, create a weight
                     for (int w = 0; w < nodeCount[layer + 1]; w++)
-                    {
-                        // Create a weight
                         weights[layer][node][w] = 0;
-                    }
                 }
             }
         }
@@ -68,7 +62,7 @@ namespace CSharp_NN
         public bool Iterate()
         {
             try
-            {        
+            {
                 // For every layer except the first layer
                 for (int layer = 1; layer < nodes.Length; layer++)
                 {
@@ -81,24 +75,17 @@ namespace CSharp_NN
                         // For each node in the previous layer..
                         // Sum the product of every node in that layer and the weight that connects it to the current node
                         for (int nodeInPreviousLayer = 0; nodeInPreviousLayer < nodes[layer - 1].Length; nodeInPreviousLayer++)
-                        {
                             nodes[layer][node] += nodes[layer - 1][nodeInPreviousLayer] * weights[layer - 1][nodeInPreviousLayer][node];
-                        }
 
                         // Add the bias
-                        nodes[layer][node] += biases[layer][node];               
-
+                        nodes[layer][node] += biases[layer][node];
                     }
+
                     // Activate
                     if (layer < nodes.Length - 1)
-                    {
                         nodes[layer] = Activate(nodes[layer], hiddenLayerFunctions[layer - 1]);
-                    }
                     else
-                    {
                         nodes[layer] = Activate(nodes[layer], outputLayerFunction);
-                    }
-                 
                 }
 
                 return true;
@@ -109,20 +96,15 @@ namespace CSharp_NN
         public static double[] Activate(double[] values, ActivationFunction function)
         {
             try
-            {              
+            {
                 if (function == ActivationFunction.ReLU)
-                {
                     return MathTools.ReLU(values);
-                }
                 else if (function == ActivationFunction.Sigmoid)
-                {
-                    return MathTools.Sigmoid(values);             
-                }
+                    return MathTools.Sigmoid(values);
                 else if (function == ActivationFunction.Softmax)
-                {
                     return MathTools.Softmax(values);
-                }
-                else { return values; }
+                else
+                    return values;
             }
             catch (Exception ex)
             {
@@ -130,7 +112,5 @@ namespace CSharp_NN
                 return values;
             }
         }
-
-       
     }
 }
