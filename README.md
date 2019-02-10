@@ -1,7 +1,7 @@
 # C# NN
 Simple neuroevolution of feedforward neural networks through a genetic algorithm in C#.
 
-This project is my attempt to implement the ideas in Such, et. al 2017 (Uber AI Labs)
+This project is my attempt to implement the ideas in Such, et al. 2017 (Uber AI Labs)
 https://arxiv.org/abs/1712.06567
 
 The project has minimal concern with training speed. It does have basic optimizations (e.g. using jagged arrays over linked lists) but no multithreading, no GPU math libraries, or the like.
