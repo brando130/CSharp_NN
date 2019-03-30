@@ -17,6 +17,3 @@ The additional classes are:
   Training - Imports the training data and defines the cost functions.
   
   NNHelper - Static functions to help with the NN class. (Copy, Print)
-  
-  MathTools - A number of common neural network functions (ReLU, Sigmoid, Softmax)
-
