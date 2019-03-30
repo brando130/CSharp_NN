@@ -9,108 +9,242 @@ namespace CSharp_NN
 {
     public class NN
     {
+
         // Feedforward Neural Network
-        // (C) 2019 Brandon Anderson  brando.slc@gmail.com
+        // (C) 2019 Brandon Anderson brando.slc@gmail.com (MIT License)
 
-        public enum ActivationFunction { None, ReLU, Sigmoid, Tanh, Step, Softmax }
+        public enum Activation { None, LeakyReLU, ReLU, Sigmoid, Softmax, Step, Tanh }
+        public Activation[] hLA;
+        public Activation oLA;
+        public float[][] nodes, biases, nets;
+        public float[][][] weights;
+        public float[][][] updateToWeights;
 
-        // Nodes ( w/ biases, weights and activation functions)
-        public double[][] nodes;
-        public double[][] biases;
-        public double[][][] weights;
-        public double cost;
-        public ActivationFunction[] hiddenLayerFunctions;
-        public ActivationFunction outputLayerFunction;
+        public float[] errors;
+        public float cost;
+        public float[][] gradientOfTotalErrorWithRespectToOutput;
+        public float[][] gradientOfTotalErrorWithRespectToNet;
+        public float[][] gradientOfOutputWithRespectToNet;
 
-        public NN(int[] nodeCount, ActivationFunction[] hiddenLayerActivationFunction, ActivationFunction outputLayerActivationFunction)
+        public NN(int[] nodeCounts, Activation[] hiddenLayerActivations, Activation outputLayerActivation)
         {
+            hLA = hiddenLayerActivations;
+            oLA = outputLayerActivation;
 
-            nodes = new double[nodeCount.Length][];
-            biases = new double[nodeCount.Length][];
-            weights = new double[nodeCount.Length][][];
-            hiddenLayerFunctions = hiddenLayerActivationFunction;
-            outputLayerFunction = outputLayerActivationFunction;
+            nodes = new float[nodeCounts.Length][];
+            errors = new float[nodeCounts[nodeCounts.Length - 1]];
+            nets = new float[nodeCounts.Length - 1][];
+            biases = new float[nodeCounts.Length - 1][];
+            gradientOfTotalErrorWithRespectToOutput = new float[nodeCounts.Length][];
+            gradientOfTotalErrorWithRespectToNet = new float[nodeCounts.Length][];
+            gradientOfOutputWithRespectToNet = new float[nodeCounts.Length][];
+            weights = new float[nodeCounts.Length - 1][][];
+            updateToWeights = new float[nodeCounts.Length - 1][][];
 
-            // Create nodes (with biases and activation functions) for every layer
-            for (int layer = 0; layer < nodeCount.Length; layer++)
+            for (int layer = 0; layer < nodeCounts.Length; layer++)
             {
-                nodes[layer] = new double[nodeCount[layer]];
-                biases[layer] = new double[nodeCount[layer]];
-                for (int i = 0; i < nodeCount[layer]; i++)
+                nodes[layer] = new float[nodeCounts[layer]];
+                if (layer > 0)
                 {
-                    double node = 0;
-                    double bias = 0;
-                    nodes[layer][i] = node;
-                    biases[layer][i] = bias;
+                    biases[layer - 1] = new float[nodeCounts[layer]];
+                    nets[layer - 1] = new float[nodeCounts[layer]];
                 }
-            }
-            // For every layer except the last layer
-            for (int layer = 0; layer < nodeCount.Length - 1; layer++)
-            {
-                weights[layer] = new double[nodeCount[layer]][];
-                // For every node in the layer
-                for (int node = 0; node < nodeCount[layer]; node++)
+                if (layer < nodeCounts.Length - 1)
                 {
-                    weights[layer][node] = new double[nodeCount[layer + 1]];
-                    // For every node in the next layer, create a weight
-                    for (int w = 0; w < nodeCount[layer + 1]; w++)
-                        weights[layer][node][w] = 0;
+                    weights[layer] = new float[nodeCounts[layer + 1]][];
+                    updateToWeights[layer] = new float[nodeCounts[layer + 1]][];
+                }
+
+                for (int node = 0; node < nodeCounts[layer]; node++)
+                {
+                    nodes[layer][node] = 0f;
+                    if (layer > 0)
+                    {
+                        biases[layer - 1][node] = 0f;
+                        nets[layer - 1][node] = 0f;
+                    }
+                    if (layer < nodeCounts.Length - 1)
+                    {
+                        weights[layer][node] = new float[nodeCounts[layer + 1]];
+                        updateToWeights[layer][node] = new float[nodeCounts[layer + 1]];
+                        for (int nodeInNextLayer = 0; nodeInNextLayer < nodeCounts[layer + 1]; nodeInNextLayer++)
+                        {
+                            weights[layer][node][nodeInNextLayer] = 0f;
+                            updateToWeights[layer][node][nodeInNextLayer] = 0f;
+                        }
+                    }
                 }
             }
         }
 
         public bool Iterate()
         {
-            try
+            for (int layer = 1; layer < nodes.Length; layer++)
             {
-                // For every layer except the first layer
-                for (int layer = 1; layer < nodes.Length; layer++)
+                for (int node = 0; node < nodes[layer].Length; node++)
                 {
-                    // For each node in the layer
-                    for (int node = 0; node < nodes[layer].Length; node++)
+                    float sum = 0f;
+                    for (int nodeInPreviousLayer = 0; nodeInPreviousLayer < nodes[layer - 1].Length; nodeInPreviousLayer++)
                     {
-                        // Reset the value
-                        nodes[layer][node] = 0;
-
-                        // For each node in the previous layer..
-                        // Sum the product of every node in that layer and the weight that connects it to the current node
-                        for (int nodeInPreviousLayer = 0; nodeInPreviousLayer < nodes[layer - 1].Length; nodeInPreviousLayer++)
-                            nodes[layer][node] += nodes[layer - 1][nodeInPreviousLayer] * weights[layer - 1][nodeInPreviousLayer][node];
-
-                        // Add the bias
-                        nodes[layer][node] += biases[layer][node];
+                        sum += nodes[layer - 1][nodeInPreviousLayer] * weights[layer - 1][nodeInPreviousLayer][node];
                     }
-
-                    // Activate
-                    if (layer < nodes.Length - 1)
-                        nodes[layer] = Activate(nodes[layer], hiddenLayerFunctions[layer - 1]);
-                    else
-                        nodes[layer] = Activate(nodes[layer], outputLayerFunction);
+                    nodes[layer][node] = sum + biases[layer - 1][node];
+                    nets[layer - 1][node] = nodes[layer][node];
                 }
-
-                return true;
+                if (layer < nodes.Length - 1)
+                    nodes[layer] = Activate(nodes[layer], hLA[layer - 1]);
+                else
+                    nodes[layer] = Activate(nodes[layer], oLA);
             }
-            catch (Exception ex) { Debug.WriteLine(ex.Message); return false; }
+            return true;
         }
 
-        public static double[] Activate(double[] values, ActivationFunction function)
+        public bool Backpropagate(float[] target, float learningRate)
         {
-            try
+
+            cost = 0f;
+
+            for (int i = 0; i < nodes[nodes.Length - 1].Length; i++)
             {
-                if (function == ActivationFunction.ReLU)
-                    return MathTools.ReLU(values);
-                else if (function == ActivationFunction.Sigmoid)
-                    return MathTools.Sigmoid(values);
-                else if (function == ActivationFunction.Softmax)
-                    return MathTools.Softmax(values);
+                errors[i] = 0.5f * (float)Math.Pow(target[i] - nodes[nodes.Length - 1][i], 2f);
+                cost += errors[i];
+            }
+
+            for (int layer = nodes.Length - 1; layer > 0; layer--)
+            {
+                // Output layer
+                if (layer == nodes.Length - 1)
+                {
+                    gradientOfTotalErrorWithRespectToOutput[layer - 1] = new float[target.Length];
+                    gradientOfTotalErrorWithRespectToNet[layer - 1] = new float[target.Length];
+                    gradientOfOutputWithRespectToNet[layer - 1] = new float[target.Length];
+
+                    // For each output node
+                    for (int i = 0; i < nodes[nodes.Length - 1].Length; i++)
+                    {
+                        gradientOfTotalErrorWithRespectToOutput[layer - 1][i] = (target[i] - nodes[nodes.Length - 1][i]) * -1f;
+                        gradientOfOutputWithRespectToNet[layer - 1][i] = nodes[nodes.Length - 1][i] * (1 - nodes[nodes.Length - 1][i]);
+                        for (int j = 0; j < weights[layer - 1][i].Length; j++)
+                        {
+                            updateToWeights[layer - 1][j][i] = weights[layer - 1][j][i] - learningRate * (gradientOfTotalErrorWithRespectToOutput[layer - 1][i] * gradientOfOutputWithRespectToNet[layer - 1][i] * nodes[layer - 1][i]);
+                        }
+                    }
+                }
+
+                // Hidden Layers
                 else
-                    return values;
+                {
+                    gradientOfTotalErrorWithRespectToNet[layer - 1] = new float[nodes[layer].Length];
+                    gradientOfTotalErrorWithRespectToOutput[layer - 1] = new float[nodes[layer].Length];
+                    gradientOfOutputWithRespectToNet[layer - 1] = new float[nodes[layer].Length];
+
+                    for (int i = 0; i < nodes[layer].Length; i++)
+                    {
+                        gradientOfTotalErrorWithRespectToOutput[layer - 1][i] = 0f;
+                        float[] gradientOfOutputInNextLayerWithRespectToOutput = new float[nodes[layer + 1].Length];
+                        for (int j = 0; j < nodes[layer + 1].Length; j++)
+                        {
+                            gradientOfTotalErrorWithRespectToNet[layer - 1][j] = gradientOfTotalErrorWithRespectToOutput[layer][j] * gradientOfOutputWithRespectToNet[layer][j];
+                            gradientOfOutputInNextLayerWithRespectToOutput[j] = gradientOfTotalErrorWithRespectToNet[layer - 1][j] * weights[layer][i][j];
+                            gradientOfTotalErrorWithRespectToOutput[layer - 1][i] += gradientOfOutputInNextLayerWithRespectToOutput[j];
+                        }
+                    }
+                    for (int i = 0; i < nodes[layer].Length; i++)
+                    {
+                        gradientOfOutputWithRespectToNet[layer - 1][i] = nodes[layer][i] * (1 - nodes[layer][i]);
+                        for (int j = 0; j < weights[layer - 1][i].Length; j++)
+                        {
+                            updateToWeights[layer - 1][j][i] = weights[layer - 1][j][i] - learningRate * (gradientOfTotalErrorWithRespectToOutput[layer - 1][i] * gradientOfOutputWithRespectToNet[layer - 1][i] * nodes[layer - 1][i]);
+                        }
+                    }
+                }
             }
-            catch (Exception ex)
+
+            // Update weights
+            for (int l = 0; l < nodes.Length - 1; l++)
             {
-                Debug.WriteLine(ex.Message);
-                return values;
+                for (int n = 0; n < nodes[l].Length; n++)
+                {
+                    for (int w = 0; w < nodes[l + 1].Length; w++)
+                    {
+                        weights[l][n][w] = updateToWeights[l][n][w];
+                    }
+                }
             }
+
+            return true;
+        }
+
+        public static float[] Activate(float[] vector, Activation function)
+        {
+            if (function == Activation.ReLU)
+                return ReLU(vector);
+            else if (function == Activation.Sigmoid)
+                return Sigmoid(vector);
+            else if (function == Activation.Softmax)
+                return Softmax(vector);
+            else
+                return vector;
+        }
+
+
+        public static double NextDouble(Random rand, double max)
+        {
+            return rand.NextDouble() * max;
+        }
+
+        public static double NextDouble(Random rand, double min, double max)
+        {
+            return min + (rand.NextDouble() * (max - min));
+        }
+
+        public static float[] Sigmoid(float[] vector)
+        {
+            float[] rVector = new float[vector.Length];
+            for (int i = 0; i < vector.Length; i++)
+            {
+                float eToNumber = (float)Math.Exp(vector[i]);
+                rVector[i] = eToNumber / (1 + eToNumber);
+            }
+            return rVector;
+        }
+
+        public static float[] ReLU(float[] vector)
+        {
+            float[] rVector = new float[vector.Length];
+            for (int i = 0; i < vector.Length; i++)
+            {
+                if (vector[i] > 0)
+                    rVector[i] = vector[i];
+                else
+                    rVector[i] = 0f;
+            }
+            return rVector;
+        }
+
+        public static float[] Softmax(float[] vector)
+        {
+
+            float sum = 0;
+
+            // Calculate the exponetiated vector
+            float[] eVector = new float[vector.Length];
+            float[] rVector = new float[vector.Length];
+
+            for (int i = 0; i < vector.Length; i++)
+            {
+                float eNum = (float)Math.Pow(Math.E, vector[i]);
+                eVector[i] = eNum;
+                sum += eNum;
+            }
+
+            // Calculate the softmax for each number in the vector
+            for (int i = 0; i < vector.Length; i++)
+            {
+                rVector[i] = eVector[i] / sum;
+            }
+
+            return rVector;
         }
     }
 }
